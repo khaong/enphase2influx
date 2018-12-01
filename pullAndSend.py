@@ -9,7 +9,6 @@ __copyright__ = "Copyright 2018, FireMON, WaterMON, EarthMON, SpaceMON"
 __version__ = "1.1.0"
 
 import json
-import urllib2
 import requests
 from requests.auth import HTTPDigestAuth
 from influxdb import InfluxDBClient
@@ -79,10 +78,8 @@ print "************************"
 print "Getting Enphase JSON information from server " + __url__
 # Query the url
 try:
-        response = urllib2.urlopen(__url__)
+        data = requests.get(__url__).json()
 
-        # Load response into json object
-        data = json.loads(response.read())
         productionInverterData = data['production'][0]
         productionEimData = data['production'][1]
         consumptionData = data['consumption'][0]
@@ -110,7 +107,7 @@ try:
         if consumptionData['readingTime'] > lastConsumptionTime:
                 print "Pushing total consumption data"
                 pushData(consumptionData, "total_consumption", client)
-		lastConsumptionTime = consumptionData['readingTime']
+                lastConsumptionTime = consumptionData['readingTime']
 
         if netconsumptionData['readingTime'] > lastNetConsumptionTime:
                 print "Pushing net consumption"
