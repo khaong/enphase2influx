@@ -10,6 +10,8 @@ __version__ = "1.1.0"
 
 import json
 import urllib2
+import requests
+from requests.auth import HTTPDigestAuth
 from influxdb import InfluxDBClient
 import time
 import progressbar
@@ -28,9 +30,18 @@ __dbname__ = 'enphase'
 parser = argparse.ArgumentParser()
 parser.add_argument('--url', default="http://enphase.ayent/production.json",
         help='the URL of production.json (default: http://enphase.ayent/production.json)')
+parser.add_argument('--per_inverter_url', default="http://envoy.local/api/v1/production/inverters",
+        help='the URL of the per-inverter api (default: http://envoy.local/api/v1/production/inverters)')
+parser.add_argument('--per_inverter_username',
+        help='the username for the per-inverter api')
+parser.add_argument('--per_inverter_password',
+        help='the password for the per-inverter api')
 
 args = parser.parse_args()
 __url__ = args.url
+__per_inverter_url__ = args.per_inverter_url
+__per_inverter_username__ = args.per_inverter_username
+__per_inverter_password__ = args.per_inverter_password
 
 # Last reading time, used to avoid pushing same values twice
 lastProductionInverterTime = 0
@@ -47,6 +58,19 @@ def pushData(data, seriesName, client):
         val["measurement"] = seriesName
         valQuery[0] = val
         client.write_points(valQuery)
+
+def transform_inverter_status(status):
+        """Transform an inverter status into an influx record"""
+        return {
+                "measurement": "per_inverter",
+                "tags": {
+                    "serialNumber": status['serialNumber'],
+                },
+                "time": status['lastReportDate'],
+                "fields": {
+                    "lastReportWatts": status['lastReportWatts']
+                }
+        }
 
 client = InfluxDBClient(__host__, __port__, database=__dbname__)
 
@@ -98,3 +122,16 @@ except Exception as e:
 
 print "************************"
 
+if __per_inverter_url__ is not None:
+        print "Getting Enphase JSON information from server " + __per_inverter_url__
+        print "************************"
+        try:
+                response = requests.get(__per_inverter_url__, auth=HTTPDigestAuth(__per_inverter_username__, __per_inverter_password__))
+                data = list(map(transform_inverter_status, response.json()))
+
+                print "Pushing production data for %s inverters" % len(data)
+                client.write_points(data, time_precision='s')
+        except Exception as e:
+                print e
+
+        print "************************"
