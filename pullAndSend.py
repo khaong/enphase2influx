@@ -51,12 +51,12 @@ lastNetConsumptionTime = 0
 """Functions definitions"""
 def pushData(data, seriesName, client):
         """Push data  into InfluxDB"""
-        valQuery = [1]
-        val = {}
-        val["fields"] = data
-        val["measurement"] = seriesName
-        valQuery[0] = val
-        client.write_points(valQuery)
+        points = [{
+                "measurement": seriesName,
+                "time": data['readingTime'],
+                "fields": data
+        }]
+        client.write_points(points, time_precision='s')
 
 def transform_inverter_status(status):
         """Transform an inverter status into an influx record"""
