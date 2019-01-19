@@ -78,7 +78,7 @@ print "************************"
 print "Getting Enphase JSON information from server " + __url__
 # Query the url
 try:
-        data = requests.get(__url__).json()
+        data = requests.get(__url__, timeout=5).json()
 
         productionInverterData = data['production'][0]
         productionEimData = data['production'][1]
@@ -123,7 +123,7 @@ if __per_inverter_url__ is not None:
         print "Getting Enphase JSON information from server " + __per_inverter_url__
         print "************************"
         try:
-                response = requests.get(__per_inverter_url__, auth=HTTPDigestAuth(__per_inverter_username__, __per_inverter_password__))
+                response = requests.get(__per_inverter_url__, auth=HTTPDigestAuth(__per_inverter_username__, __per_inverter_password__), timeout=5)
                 if response.status_code is not 200:
                         raise Exception("Could not get a valid response, please check your Per-inverter URL, username and password")
                 data = list(map(transform_inverter_status, response.json()))
