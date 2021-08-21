@@ -1,5 +1,7 @@
 #!/bin/sh
+. ./env.sh
+
 while [ 1 ]; do
-    python /home/pyrrhus/enphase2influx/pullAndSend.py &
-    sleep 15
+    python2 ./pullAndSend.py --url $ENVOY_URL --per_inverter_url $ENVOY_PER_INVERTER_URL --per_inverter_username $ENVOY_USERNAME --per_inverter_password $ENVOY_PASSWORD
+    sleep 10
 done

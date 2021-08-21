@@ -60,10 +60,45 @@ def pushData(data, seriesName, client):
 
 def transform_inverter_status(status):
         """Transform an inverter status into an influx record"""
+        array_id = None
+
+        nw_row_1 = [
+            "121834016762",
+            "121834017142",
+            "121834017531",
+            "121834016909",
+            "121834017063",
+            "121834016079",
+            "121834015898",
+        ]
+        nw_row_2 = [
+            "121834017129",
+            "121834017050",
+            "121834017135",
+            "121834016760",
+            "121834016763",
+            "121834017765",
+            "121834017118"
+        ]
+        sw_row = [
+            "121834012995",
+            "121834017144",
+            "121834017073",
+            "121834012414"
+        ]
+
+        if status['serialNumber'] in nw_row_1:
+            array_id = 'NW_1'
+        if status['serialNumber'] in nw_row_2:
+            array_id = 'NW_2'
+        if status['serialNumber'] in sw_row:
+            array_id = 'SW'
+
         return {
                 "measurement": "per_inverter",
                 "tags": {
                     "serialNumber": status['serialNumber'],
+                    "array": array_id
                 },
                 "time": status['lastReportDate'],
                 "fields": {
