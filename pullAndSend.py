@@ -10,11 +10,13 @@ __version__ = "1.1.0"
 
 import json
 import requests
+from urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
 from requests.auth import HTTPDigestAuth
 from influxdb import InfluxDBClient
 import time
-import progressbar
 import argparse
+from time import sleep
 
 # Sleep time setting
 __sleepTime__ = 30
@@ -49,6 +51,25 @@ lastConsumptionTime = 0
 lastNetConsumptionTime = 0
 
 """Functions definitions"""
+def requests_retry_session(
+    retries=3,
+    backoff_factor=0.3,
+    status_forcelist=(500, 502, 504),
+    session=None,
+):
+    session = session or requests.Session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=status_forcelist,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
+
 def pushData(data, seriesName, client):
         """Push data  into InfluxDB"""
         points = [{
@@ -113,7 +134,7 @@ print "************************"
 print "Getting Enphase JSON information from server " + __url__
 # Query the url
 try:
-        data = requests.get(__url__, timeout=5).json()
+        data = requests_retry_session().get(__url__, timeout=5).json()
 
         productionInverterData = data['production'][0]
         productionEimData = data['production'][1]
@@ -155,10 +176,11 @@ except Exception as e:
 print "************************"
 
 if __per_inverter_url__ is not None:
+        sleep(5)
         print "Getting Enphase JSON information from server " + __per_inverter_url__
         print "************************"
         try:
-                response = requests.get(__per_inverter_url__, auth=HTTPDigestAuth(__per_inverter_username__, __per_inverter_password__), timeout=5)
+                response = requests_retry_session().get(__per_inverter_url__, auth=HTTPDigestAuth(__per_inverter_username__, __per_inverter_password__), timeout=5)
                 if response.status_code is not 200:
                         raise Exception("Could not get a valid response, please check your Per-inverter URL, username and password")
                 data = list(map(transform_inverter_status, response.json()))
