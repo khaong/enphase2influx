@@ -180,7 +180,7 @@ if __per_inverter_url__ is not None:
         print("************************")
         try:
                 response = requests_retry_session().get(__per_inverter_url__, auth=HTTPDigestAuth(__per_inverter_username__, __per_inverter_password__), timeout=5)
-                if response.status_code is not 200:
+                if response.status_code != 200:
                         raise Exception("Could not get a valid response, please check your Per-inverter URL, username and password")
                 data = list(map(transform_inverter_status, response.json()))
 
