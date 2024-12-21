@@ -168,6 +168,7 @@ logging.info("Getting Enphase JSON information from server " + __url__)
 # Query the url
 try:
         data = requests_retry_session().get(__url__, timeout=5, headers=headers, verify=False).json()
+        data.raise_for_status()
 
         productionInverterData = data['production'][0]
         productionEimData = data['production'][1]
@@ -213,8 +214,8 @@ if __per_inverter_url__ is not None:
         logging.info("************************")
         try:
                 response = requests_retry_session().get(__per_inverter_url__, timeout=5, headers=headers, verify=False)
-                if response.status_code != 200:
-                        raise Exception("Could not get a valid response, please check your Per-inverter URL, username and password")
+                response.raise_for_status()
+
                 data = list(map(transform_inverter_status, response.json()))
 
                 logging.info("Pushing production data for %s inverters" % len(data))
