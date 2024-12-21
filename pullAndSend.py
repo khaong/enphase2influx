@@ -42,18 +42,40 @@ __dbname__ = 'enphase'
 parser = argparse.ArgumentParser()
 parser.add_argument('--url', default="http://enphase.ayent/production.json",
         help='the URL of production.json (default: http://enphase.ayent/production.json)')
-parser.add_argument('--per_inverter_url', default="http://envoy.local/api/v1/production/inverters",
-        help='the URL of the per-inverter api (default: http://envoy.local/api/v1/production/inverters)')
+parser.add_argument('--per_inverter_url', default="https://envoy.local/api/v1/production/inverters",
+        help='the URL of the per-inverter api (default: https://envoy.local/api/v1/production/inverters)')
 parser.add_argument('--per_inverter_username',
         help='the username for the per-inverter api')
 parser.add_argument('--per_inverter_password',
         help='the password for the per-inverter api')
+parser.add_argument('--auth_token_file',
+        help='the authorization token for the gateway')
 
 args = parser.parse_args()
 __url__ = args.url
 __per_inverter_url__ = args.per_inverter_url
 __per_inverter_username__ = args.per_inverter_username
 __per_inverter_password__ = args.per_inverter_password
+__auth_token_file__ = args.auth_token_file
+
+def read_auth_token(file_path):
+        """Read the authorization token from a file."""
+        try:
+                with open(file_path, 'r') as file:
+                        token = file.read().strip()
+                        return token
+        except Exception as e:
+                logging.error(f"Error reading auth token from file: {e}")
+                return None
+
+if __auth_token_file__:
+        auth_token = read_auth_token(__auth_token_file__)
+        if auth_token:
+                headers = {'Authorization': f'Bearer {auth_token}'}
+        else:
+                headers = {}
+else:
+        headers = {}
 
 # Last reading time, used to avoid pushing same values twice
 lastProductionInverterTime = 0
@@ -145,7 +167,7 @@ logging.info("************************")
 logging.info("Getting Enphase JSON information from server " + __url__)
 # Query the url
 try:
-        data = requests_retry_session().get(__url__, timeout=5).json()
+        data = requests_retry_session().get(__url__, timeout=5, headers=headers, verify=False).json()
 
         productionInverterData = data['production'][0]
         productionEimData = data['production'][1]
@@ -190,7 +212,7 @@ if __per_inverter_url__ is not None:
         logging.info("Getting Enphase JSON information from server " + __per_inverter_url__)
         logging.info("************************")
         try:
-                response = requests_retry_session().get(__per_inverter_url__, auth=HTTPDigestAuth(__per_inverter_username__, __per_inverter_password__), timeout=5)
+                response = requests_retry_session().get(__per_inverter_url__, timeout=5, headers=headers, verify=False)
                 if response.status_code != 200:
                         raise Exception("Could not get a valid response, please check your Per-inverter URL, username and password")
                 data = list(map(transform_inverter_status, response.json()))
